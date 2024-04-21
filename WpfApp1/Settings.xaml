@@ -1,0 +1,72 @@
+<Window x:Class="WpfApp1.Settings"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="Settings" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="10">
+        <StackPanel Margin="0 5">
+            <Label FontWeight="Bold">Application Options</Label>
+            <CheckBox Name="ShowOnStartUp" Click="ShowOnStartUp_OnClick">Show when computer starts</CheckBox>
+        </StackPanel>
+        
+        <StackPanel Margin="0 5">
+            <Label FontWeight="Bold">Alert Options</Label>
+            <Grid Margin="0 0 0 10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label>Alert when uptime is: </Label>
+                <ComboBox Grid.Column="1" SelectedValuePath="Key" DisplayMemberPath="Value" Name="UptimeValue" DropDownClosed="UptimeValue_OnDropDownClosed"></ComboBox>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label>Alert Frequency: </Label>
+                <ComboBox Grid.Column="1" SelectedValuePath="Key" DisplayMemberPath="Value" Name="AlertFreq" DropDownClosed="AlertFreq_OnDropDownClosed"></ComboBox>
+            </Grid>
+        </StackPanel>
+        
+        <StackPanel Margin="0 5">
+            <StackPanel>
+                <Label FontWeight="Bold">Misc (not functional yet)</Label>
+                <CheckBox Name="SpamMode" Click="SpamMode_OnClick">Spam Mode</CheckBox>
+                <TextBlock FontSize="10" Margin="20 0 0 0">Spams Windows everywhere as time progresses</TextBlock>
+            </StackPanel>
+            <Grid Margin="0 10 0 0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label>Spam Every: </Label>
+                <ComboBox Grid.Column="1" SelectedValuePath="Key" DisplayMemberPath="Value" Name="SpamFreq" IsEnabled="{Binding Path=IsChecked, ElementName=SpamMode}" DropDownClosed="SpamFreq_OnDropDownClosed"></ComboBox>
+            </Grid>
+        </StackPanel>
+        
+        <Grid Margin="0 10"  HorizontalAlignment="Right">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Button Margin="5 0" Padding="2.5" Name="Reset" Click="Reset_OnClick">Reset to default</Button>
+            <Button Grid.Column="1" Padding="2.5" HorizontalAlignment="Center" VerticalAlignment="Center" Name="Save" Click="Save_OnClick">Apply Changes</Button>
+        </Grid>
+        <TextBlock Name="OpenJson" Margin="0 10" Foreground="RoyalBlue" MouseUp="OpenJson_OnMouseUp"><Underline>Open Json File</Underline></TextBlock>
+    </StackPanel>
+</Window>
