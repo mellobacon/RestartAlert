@@ -14,6 +14,8 @@ namespace WpfApp1;
 /// </summary>
 public partial class App : Application
 {
+    private readonly string _path = "../../../appsettings.json";
+    private AppSettings _appsettings;
     public struct AppSettings()
     {
         public bool ShowSettingsOnStartup { get; set; } = false;
@@ -30,7 +32,6 @@ public partial class App : Application
         LoadSettings();
         
         var settings = new Settings();
-        
         var icon = new TaskbarIcon();
         icon.Icon = new Icon("../../../Icons/icon.ico");
         var menu = new ContextMenu
@@ -66,32 +67,56 @@ public partial class App : Application
             {
                 while (true)
                 {
-                    settings.CheckUptime();
-                    Thread.Sleep(TimeSpan.FromHours((int)settings.AlertFreq.SelectedValue));
+                    CheckUptime();
+                    Thread.Sleep(TimeSpan.FromHours(_appsettings.AlertFrequency_Hours));
                 }
             });
         }
         catch (Exception ex)
         {
             MessageBox.Show(ex.Message);
+            Console.WriteLine(ex.Message);
         }
     }
 
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
-    private async void LoadSettings()
+    private void LoadSettings()
     {
-        const string path = "../../../appsettings.json";
-        if (File.Exists(path))
+        if (File.Exists(_path))
         {
             Console.WriteLine("Settings file found...");
+            string settingsFile = File.ReadAllText(_path);
+            _appsettings = JsonSerializer.Deserialize<AppSettings>(settingsFile);
             return;
         }
-        WriteSettings(path, new AppSettings());
+        WriteSettings(_path, new AppSettings());
     }
 
     private async void WriteSettings(string path, AppSettings appSettings)
     {
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, appSettings, _options);
+        _appsettings = appSettings;
+    }
+    
+    private void CheckUptime()
+    {
+        Console.WriteLine("Checking uptime...");
+        long ticks = Environment.TickCount64;
+        var timespan = TimeSpan.FromMilliseconds(ticks);
+        if (timespan.TotalMicroseconds > TimeSpan.FromDays(_appsettings.MinUpTime_Days).TotalMicroseconds)
+        {
+            ShowAlert(timespan);
+        }
+    }
+    
+    private void ShowAlert(TimeSpan time)
+    {
+        MessageBox.Show($"Computer hasnt been restarted in {_appsettings.MinUpTime_Days} day(s)" +
+                        "\nFix your shit." + 
+                        $"\n\nUptime: {time}",
+            "Uptime Warning",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information, MessageBoxResult.None, MessageBoxOptions.DefaultDesktopOnly);
     }
 }

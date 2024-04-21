@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
@@ -14,9 +15,31 @@ public partial class Settings : Window
     private bool _spamEnabled;
     private int _spamFreq;
 
-    private string _path = "../../../appsettings.json";
+    private readonly string _path = "../../../appsettings.json";
+    private readonly App.AppSettings _defaultSettings;
 
-    private App.AppSettings _defaultSettings;
+    private readonly KeyValuePair<uint,string>[] _uptimeValues =
+    [
+        new KeyValuePair<uint, string>(1, "1 Day"),
+        new KeyValuePair<uint, string>(5, "5 Days"),
+        new KeyValuePair<uint, string>(30, "30 Days")
+    ];
+
+    private readonly KeyValuePair<int, string>[] _alertFreqs =
+    [
+        new KeyValuePair<int, string>(1, "1 hour"),
+        new KeyValuePair<int, string>(3, "3 hour"),
+        new KeyValuePair<int, string>(6, "6 hour"),
+        new KeyValuePair<int, string>(8, "8 hour"),
+        new KeyValuePair<int, string>(-1, "Never")
+    ];
+
+    private readonly KeyValuePair<int, string>[] _spamFreqs =
+    [
+        new KeyValuePair<int, string>(5, "5 minutes"),
+        new KeyValuePair<int, string>(10, "10 minutes"),
+        new KeyValuePair<int, string>(20, "20 minutes")
+    ];
 
     public Settings()
     {
@@ -26,43 +49,11 @@ public partial class Settings : Window
         var settings = JsonSerializer.Deserialize<App.AppSettings>(settingsFile);
         _defaultSettings = settings;
         
-        var uptimeValues = new[]
-        {
-            new KeyValuePair<uint, string>(1, "1 Day"),
-            new KeyValuePair<uint, string>(5, "5 Days"),
-            new KeyValuePair<uint, string>(30, "30 Days")
-        };
-        var alertFreqs = new[]
-        {
-            new KeyValuePair<int, string>(1, "1 hour"),
-            new KeyValuePair<int, string>(3, "3 hour"),
-            new KeyValuePair<int, string>(6, "6 hour"),
-            new KeyValuePair<int, string>(8, "8 hour"),
-            new KeyValuePair<int, string>(-1, "Never")
-        };
-        var spamFreqs = new[]
-        {
-            new KeyValuePair<int, string>(5, "5 minutes"),
-            new KeyValuePair<int, string>(10, "10 minutes"),
-            new KeyValuePair<int, string>(20, "20 minutes"),
-        };
-        UptimeValue.ItemsSource = uptimeValues;
-        UptimeValue.SelectedItem = uptimeValues.Single(x => x.Key == settings.MinUpTime_Days);
+        UptimeValue.ItemsSource = _uptimeValues;
+        AlertFreq.ItemsSource = _alertFreqs;
+        SpamFreq.ItemsSource = _spamFreqs;
         
-        AlertFreq.ItemsSource = alertFreqs;
-        AlertFreq.SelectedItem = alertFreqs.Single(x => x.Key == settings.AlertFrequency_Hours);
-        
-        SpamFreq.ItemsSource = spamFreqs;
-        SpamFreq.SelectedItem = spamFreqs.Single(x => x.Key == settings.SpamFrequency_Minutes);
-
-        SpamMode.IsChecked = settings.SpamEnabled;
-        ShowOnStartUp.IsChecked = settings.ShowSettingsOnStartup;
-        
-        _minUptime = (uint)UptimeValue.SelectedValue;
-        _alertFreq = (int)AlertFreq.SelectedValue;
-        _showOnStartup = (bool)SpamMode.IsChecked;
-        _spamEnabled = (bool)ShowOnStartUp.IsChecked;
-        _spamFreq = (int)SpamFreq.SelectedValue;
+        SetSettings(settings);
     }
 
     private void ShowOnStartUp_OnClick(object sender, RoutedEventArgs e)
@@ -94,7 +85,7 @@ public partial class Settings : Window
     
     private void Reset_OnClick(object sender, RoutedEventArgs e)
     {
-        
+        SetSettings(_defaultSettings);
     }
     
     private void Save_OnClick(object sender, RoutedEventArgs e)
@@ -111,16 +102,6 @@ public partial class Settings : Window
         Hide();
     }
     
-    private void ShowAlert(TimeSpan time)
-    {
-        MessageBox.Show($"Computer hasnt been restarted in {UptimeValue.Text}" +
-                        "\nFix your shit." + 
-                        $"\n\nUptime: {time}",
-            "Uptime Warning",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information, MessageBoxResult.None, MessageBoxOptions.DefaultDesktopOnly);
-    }
-    
     private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
     private async void WriteSettings(string path, App.AppSettings appSettings)
     {
@@ -128,18 +109,33 @@ public partial class Settings : Window
         await JsonSerializer.SerializeAsync(stream, appSettings, _options);
     }
 
-    public void CheckUptime()
-    {
-        long ticks = Environment.TickCount64;
-        var timespan = TimeSpan.FromMilliseconds(ticks);
-        if (timespan.TotalMicroseconds > TimeSpan.FromDays(_minUptime).TotalMicroseconds)
-        {
-            ShowAlert(timespan);
-        }
-    }
-
     private void OpenJson_OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         Process.Start("explorer.exe", _path);
+    }
+
+    private void SetSettings(App.AppSettings settings)
+    {
+        UptimeValue.SelectedItem = _uptimeValues.Single(x => x.Key == settings.MinUpTime_Days);
+        
+        AlertFreq.SelectedItem = _alertFreqs.Single(x => x.Key == settings.AlertFrequency_Hours);
+        
+        SpamFreq.SelectedItem = _spamFreqs.Single(x => x.Key == settings.SpamFrequency_Minutes);
+        
+        SpamMode.IsChecked = settings.SpamEnabled;
+        ShowOnStartUp.IsChecked = settings.ShowSettingsOnStartup;
+        
+        _minUptime = (uint)UptimeValue.SelectedValue;
+        _alertFreq = (int)AlertFreq.SelectedValue;
+        _showOnStartup = (bool)SpamMode.IsChecked;
+        _spamEnabled = (bool)ShowOnStartUp.IsChecked;
+        _spamFreq = (int)SpamFreq.SelectedValue;
+    }
+
+    protected override void OnClosing(CancelEventArgs e)
+    {
+        base.OnClosing(e);
+        e.Cancel = true;
+        Hide();
     }
 }
