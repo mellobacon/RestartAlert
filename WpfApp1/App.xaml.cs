@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 using Hardcodet.Wpf.TaskbarNotification;
 using Application = System.Windows.Application;
 
@@ -15,22 +16,39 @@ namespace WpfApp1;
 public partial class App : Application
 {
     private readonly string _path = "../../../appsettings.json";
-    private AppSettings _appsettings;
+    public static AppSettings _appsettings;
+
     public struct AppSettings()
     {
         public bool ShowSettingsOnStartup { get; set; } = false;
-        public uint MinUpTime_Days { get; set; } = 1;
-        public int AlertFrequency_Hours { get; set; } = 1;
+
+        public Dictionary<string, string> MinUpTime { get; set; } = new()
+        {
+            ["Value"] = "1",
+            ["Unit"] = "Hours"
+        };
+
+        public Dictionary<string, string> AlertFrequency { get; set; } = new()
+        {
+            ["Value"] = "1",
+            ["Unit"] = "Hours"
+        };
+
         public bool SpamEnabled { get; set; } = false;
-        public int SpamFrequency_Minutes { get; set; } = 5;
+
+        public Dictionary<string, string> SpamFrequency { get; set; } = new()
+        {
+            ["Value"] = "1",
+            ["Unit"] = "Minutes"
+        };
     }
 
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        
-        LoadSettings();
-        
+
+        _ = LoadSettings();
+
         var settings = new Settings();
         var icon = new TaskbarIcon();
         icon.Icon = new Icon("../../../Icons/icon.ico");
@@ -38,39 +56,34 @@ public partial class App : Application
         {
             Placement = PlacementMode.Left
         };
-        var settingsmenu = new MenuItem() { Header = "Settings"};
-        settingsmenu.Click += async (sender, args) =>
-        {
-            await Task.Run(() => Thread.Sleep(200));
-            settings.Show();
-        };
-        var exit = new MenuItem() {Header = "Exit"};
-        exit.Click += async (sender, args) =>
-        {
-            await Task.Run(() => Thread.Sleep(200));
-            Shutdown();
-        };
-        
+        var settingsmenu = new MenuItem() { Header = "Settings" };
+        settingsmenu.Click += (sender, args) => { settings.ShowDialog(); };
+        var exit = new MenuItem() { Header = "Exit" };
+        exit.Click += (sender, args) => { Shutdown(); };
+
         menu.Items.Add(settingsmenu);
         menu.Items.Add(exit);
         icon.ContextMenu = menu;
         icon.MenuActivation = PopupActivationMode.LeftOrRightClick;
 
-        if ((bool)settings.ShowOnStartUp.IsChecked!)
+        if (settings.ShowOnStartUp.IsChecked is true)
         {
-            settings.Show();
+            settings.ShowDialog();
         }
         
+        CheckUptime();
+
         try
         {
-            await Task.Run(() =>
+            var timer = new DispatcherTimer
             {
-                while (true)
-                {
-                    CheckUptime();
-                    Thread.Sleep(TimeSpan.FromHours(_appsettings.AlertFrequency_Hours));
-                }
-            });
+                Interval = GetAlertFreq()
+            };
+            timer.Tick += (sender, args) =>
+            {
+                CheckUptime();
+            };
+            timer.Start();
         }
         catch (Exception ex)
         {
@@ -79,44 +92,70 @@ public partial class App : Application
         }
     }
 
-    private readonly JsonSerializerOptions _options = new() { WriteIndented = true };
-    private void LoadSettings()
+    private static readonly JsonSerializerOptions _options = new() { WriteIndented = true };
+
+    private async Task LoadSettings()
     {
-        if (File.Exists(_path))
+        try
         {
-            Console.WriteLine("Settings file found...");
-            string settingsFile = File.ReadAllText(_path);
-            _appsettings = JsonSerializer.Deserialize<AppSettings>(settingsFile);
-            return;
+            await using var stream = File.OpenRead(_path);
+            _appsettings = JsonSerializer.Deserialize<AppSettings>(stream);
         }
-        WriteSettings(_path, new AppSettings());
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            _appsettings = new AppSettings();
+        }
     }
 
-    private async void WriteSettings(string path, AppSettings appSettings)
+    public static async Task WriteSettings(string path, AppSettings appSettings)
     {
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, appSettings, _options);
         _appsettings = appSettings;
     }
-    
+
     private void CheckUptime()
     {
         Console.WriteLine("Checking uptime...");
         long ticks = Environment.TickCount64;
         var timespan = TimeSpan.FromMilliseconds(ticks);
-        if (timespan.TotalMicroseconds > TimeSpan.FromDays(_appsettings.MinUpTime_Days).TotalMicroseconds)
+        if (timespan.TotalMilliseconds > GetMinUptime().TotalMilliseconds)
         {
             ShowAlert(timespan);
         }
     }
-    
+
     private void ShowAlert(TimeSpan time)
     {
-        MessageBox.Show($"Computer hasnt been restarted in {_appsettings.MinUpTime_Days} day(s)" +
-                        "\nFix your shit." + 
-                        $"\n\nUptime: {time}",
+        MessageBox.Show(
+            $"Computer hasnt been restarted in {_appsettings.MinUpTime["Value"]} {_appsettings.MinUpTime["Unit"]}" +
+            "\nFix your shit." +
+            $"\n\nUptime: {time}",
             "Uptime Warning",
             MessageBoxButton.OK,
             MessageBoxImage.Information, MessageBoxResult.None, MessageBoxOptions.DefaultDesktopOnly);
+    }
+
+    private TimeSpan GetMinUptime()
+    {
+        return _appsettings.MinUpTime["Unit"] switch
+        {
+            "Hours" => TimeSpan.FromHours(double.Parse(_appsettings.MinUpTime["Value"])),
+            "Days" => TimeSpan.FromDays(double.Parse(_appsettings.MinUpTime["Value"])),
+            "Weeks" => TimeSpan.FromDays(double.Parse(_appsettings.MinUpTime["Value"]) / 7),
+            _ => TimeSpan.MaxValue
+        };
+    }
+
+    private TimeSpan GetAlertFreq()
+    {
+        return _appsettings.AlertFrequency["Unit"] switch
+        {
+            "Hours" => TimeSpan.FromHours(double.Parse(_appsettings.AlertFrequency["Value"])),
+            "Days" => TimeSpan.FromDays(double.Parse(_appsettings.AlertFrequency["Value"])),
+            "Weeks" => TimeSpan.FromDays(double.Parse(_appsettings.AlertFrequency["Value"]) / 7),
+            _ => TimeSpan.Zero
+        };
     }
 }
