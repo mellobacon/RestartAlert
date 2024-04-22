@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 
-namespace WpfApp1;
+namespace RestartAlert;
 
 public partial class Settings : Window
 {
