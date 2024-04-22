@@ -6,6 +6,8 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
 using Hardcodet.Wpf.TaskbarNotification;
+using Serilog;
+using Serilog.Core;
 using Application = System.Windows.Application;
 
 namespace WpfApp1;
@@ -16,7 +18,10 @@ namespace WpfApp1;
 public partial class App : Application
 {
     private readonly string _path = "appsettings.json";
-    public static AppSettings AppSettingss;
+    private readonly string _logpath = "applog.txt";
+    private static AppSettings _appSettings;
+    private static DispatcherTimer _timer = new();
+    private static Logger _log = new LoggerConfiguration().CreateLogger();
 
     public struct AppSettings()
     {
@@ -25,13 +30,13 @@ public partial class App : Application
         public Dictionary<string, string> MinUpTime { get; set; } = new()
         {
             ["Value"] = "1",
-            ["Unit"] = "Hours"
+            ["Unit"] = "Hour(s)"
         };
 
         public Dictionary<string, string> AlertFrequency { get; set; } = new()
         {
             ["Value"] = "1",
-            ["Unit"] = "Hours"
+            ["Unit"] = "Hour(s)"
         };
 
         public bool SpamEnabled { get; set; } = false;
@@ -39,7 +44,7 @@ public partial class App : Application
         public Dictionary<string, string> SpamFrequency { get; set; } = new()
         {
             ["Value"] = "1",
-            ["Unit"] = "Minutes"
+            ["Unit"] = "Minute(s)"
         };
     }
 
@@ -47,9 +52,18 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        LoadSettings();
+        _log = new LoggerConfiguration()
+            .WriteTo.File(_logpath,
+                rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
 
-        var settings = new Settings();
+        LoadSettings();
+        
+        _log.Information("Starting app...");
+
+        var settings = new Settings(_appSettings);
         var icon = new TaskbarIcon();
         icon.Icon = new Icon("Icons/icon.ico");
         var menu = new ContextMenu
@@ -59,7 +73,11 @@ public partial class App : Application
         var settingsmenu = new MenuItem() { Header = "Settings" };
         settingsmenu.Click += (sender, args) => { settings.ShowDialog(); };
         var exit = new MenuItem() { Header = "Exit" };
-        exit.Click += (sender, args) => { Shutdown(); };
+        exit.Click += (sender, args) =>
+        {
+            Shutdown();
+            Log.CloseAndFlush();
+        };
 
         menu.Items.Add(settingsmenu);
         menu.Items.Add(exit);
@@ -70,20 +88,19 @@ public partial class App : Application
         {
             settings.ShowDialog();
         }
-        
-        CheckUptime();
 
         try
         {
-            var timer = new DispatcherTimer
+            _timer = new DispatcherTimer
             {
                 Interval = GetAlertFreq()
             };
-            timer.Tick += (sender, args) =>
+            _timer.Tick += (sender, args) =>
             {
                 CheckUptime();
             };
-            timer.Start();
+            _timer.Start();
+            CheckUptime();
         }
         catch (Exception ex)
         {
@@ -99,63 +116,72 @@ public partial class App : Application
         try
         {
             using var stream = File.OpenRead(_path);
-            AppSettingss = JsonSerializer.Deserialize<AppSettings>(stream);
+            _appSettings = JsonSerializer.Deserialize<AppSettings>(stream);
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
-            AppSettingss = new AppSettings();
+            Console.WriteLine(e.Message);
+            _log.Error(e.Message);
+            _appSettings = new AppSettings();
         }
     }
 
     public static async Task WriteSettings(string path, AppSettings appSettings)
     {
+        _log.Information("Saving settings...");
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, appSettings, _options);
-        AppSettingss = appSettings;
+        _appSettings = appSettings;
+        _timer.Interval = GetAlertFreq();
     }
 
     private void CheckUptime()
     {
-        Console.WriteLine("Checking uptime...");
         long ticks = Environment.TickCount64;
         var timespan = TimeSpan.FromMilliseconds(ticks);
+        _log.Information($"Checking Uptime...{timespan}");
         if (timespan.TotalMilliseconds > GetMinUptime().TotalMilliseconds)
         {
+            _log.Information("Min Uptime past threshold. Alerting...");
             ShowAlert(timespan);
         }
+        var upcomingtime = (DateTime.Now + _timer.Interval).ToString("hh:mm:ss tt");
+        _log.Information($"Check Done...Next alert in {_timer.Interval} ({upcomingtime})...");
     }
 
     private void ShowAlert(TimeSpan time)
     {
+        _timer.Stop();
         MessageBox.Show(
-            $"Computer hasnt been restarted in {AppSettingss.MinUpTime["Value"]} {AppSettingss.MinUpTime["Unit"]}" +
+            $"Computer hasnt been restarted in {_appSettings.MinUpTime["Value"]} {_appSettings.MinUpTime["Unit"]}" +
             "\nFix your shit." +
             $"\n\nUptime: {time}",
             "Uptime Warning",
             MessageBoxButton.OK,
             MessageBoxImage.Information, MessageBoxResult.None, MessageBoxOptions.DefaultDesktopOnly);
+        _timer.Start();
     }
-
+    
     private TimeSpan GetMinUptime()
     {
-        return AppSettingss.MinUpTime["Unit"] switch
+        return _appSettings.MinUpTime["Unit"] switch
         {
-            "Hours" => TimeSpan.FromHours(double.Parse(AppSettingss.MinUpTime["Value"])),
-            "Days" => TimeSpan.FromDays(double.Parse(AppSettingss.MinUpTime["Value"])),
-            "Weeks" => TimeSpan.FromDays(double.Parse(AppSettingss.MinUpTime["Value"]) / 7),
+            "Hour(s)" => TimeSpan.FromHours(double.Parse(_appSettings.MinUpTime["Value"])),
+            "Day(s)" => TimeSpan.FromDays(double.Parse(_appSettings.MinUpTime["Value"])),
+            "Week(s)" => TimeSpan.FromDays(double.Parse(_appSettings.MinUpTime["Value"]) / 7),
             _ => TimeSpan.MaxValue
         };
     }
 
-    private TimeSpan GetAlertFreq()
+    private static TimeSpan GetAlertFreq()
     {
-        return AppSettingss.AlertFrequency["Unit"] switch
+        return _appSettings.AlertFrequency["Unit"] switch
         {
-            "Hours" => TimeSpan.FromHours(double.Parse(AppSettingss.AlertFrequency["Value"])),
-            "Days" => TimeSpan.FromDays(double.Parse(AppSettingss.AlertFrequency["Value"])),
-            "Weeks" => TimeSpan.FromDays(double.Parse(AppSettingss.AlertFrequency["Value"]) / 7),
-            _ => TimeSpan.Zero
+            "Minute(s)" => TimeSpan.FromMinutes(double.Parse(_appSettings.AlertFrequency["Value"])),
+            "Hour(s)" => TimeSpan.FromHours(double.Parse(_appSettings.AlertFrequency["Value"])),
+            "Day(s)" => TimeSpan.FromDays(double.Parse(_appSettings.AlertFrequency["Value"])),
+            "Week(s)" => TimeSpan.FromDays(double.Parse(_appSettings.AlertFrequency["Value"]) / 7),
+            _ => TimeSpan.MaxValue
         };
     }
 }
