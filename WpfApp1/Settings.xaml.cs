@@ -11,18 +11,18 @@ public partial class Settings : Window
     private readonly string _path = "appsettings.json";
     private readonly App.AppSettings _defaultSettings;
 
-    public Settings()
+    public Settings(App.AppSettings settings)
     {
         InitializeComponent();
         
-        _defaultSettings = App.AppSettingss;
+        _defaultSettings = settings;
         
-        SetSettings(App.AppSettingss);
+        SetSettings(settings);
     }
 
     private void ShowOnStartUp_OnClick(object sender, RoutedEventArgs e)
     {
-        _showOnStartup = (bool)ShowOnStartUp.IsChecked!;
+        _showOnStartup = ShowOnStartUp.IsChecked is true;
     }
 
     private void Save_OnClick(object sender, RoutedEventArgs e)
@@ -69,15 +69,15 @@ public partial class Settings : Window
     {
         SpamMode.IsChecked = settings.SpamEnabled;
         ShowOnStartUp.IsChecked = settings.ShowSettingsOnStartup;
-        UptimeUnit.ItemsSource = new List<string> { "Hours", "Days", "Weeks" };
+        UptimeUnit.ItemsSource = new List<string> { "Hour(s)", "Day(s)", "Week(s)" };
         MinUptime.Text = settings.MinUpTime["Value"];
         UptimeUnit.SelectedItem = settings.MinUpTime["Unit"];
         
-        AlertFreqUnit.ItemsSource = new List<string> { "Hours", "Days", "Weeks", "Never" };
+        AlertFreqUnit.ItemsSource = new List<string> { "Minute(s)", "Hour(s)", "Day(s)", "Week(s)", "Never" };
         AlertFreq.Text = settings.AlertFrequency["Value"];
         AlertFreqUnit.SelectedItem = settings.AlertFrequency["Unit"];
         
-        SpamFreqUnit.ItemsSource = new List<string> { "Seconds", "Minutes" };
+        SpamFreqUnit.ItemsSource = new List<string> { "Second(s)", "Minute(s)" };
         SpamFreq.Text = settings.SpamFrequency["Value"];
         SpamFreqUnit.SelectedItem = settings.SpamFrequency["Unit"];
     }
