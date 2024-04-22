@@ -8,16 +8,16 @@ public partial class Settings : Window
     private bool _showOnStartup;
     private bool _spamEnabled;
 
-    private readonly string _path = "../../../appsettings.json";
+    private readonly string _path = "appsettings.json";
     private readonly App.AppSettings _defaultSettings;
 
     public Settings()
     {
         InitializeComponent();
         
-        _defaultSettings = App._appsettings;
+        _defaultSettings = App.AppSettingss;
         
-        SetSettings(App._appsettings);
+        SetSettings(App.AppSettingss);
     }
 
     private void ShowOnStartUp_OnClick(object sender, RoutedEventArgs e)
@@ -25,7 +25,7 @@ public partial class Settings : Window
         _showOnStartup = (bool)ShowOnStartUp.IsChecked!;
     }
 
-    void Save_OnClick(object sender, RoutedEventArgs e)
+    private void Save_OnClick(object sender, RoutedEventArgs e)
     {
         var settings = new App.AppSettings()
         {
@@ -47,16 +47,16 @@ public partial class Settings : Window
                 ["Unit"] = (string)SpamFreqUnit.SelectedItem
             },
         };
-        _ = App.WriteSettings(_path, settings);
+        App.WriteSettings(_path, settings);
         Hide();
     }
 
-    void SpamMode_OnClick(object sender, RoutedEventArgs e)
+    private void SpamMode_OnClick(object sender, RoutedEventArgs e)
     {
-        _spamEnabled = (bool)SpamMode.IsChecked!;
+        _spamEnabled = SpamMode.IsChecked is true;
     }
 
-    void Reset_OnClick(object sender, RoutedEventArgs e)
+    private void Reset_OnClick(object sender, RoutedEventArgs e)
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
@@ -64,8 +64,8 @@ public partial class Settings : Window
         }));
         // figure out how to refresh ui
     }
-
-    void SetSettings(App.AppSettings settings)
+    
+    private void SetSettings(App.AppSettings settings)
     {
         SpamMode.IsChecked = settings.SpamEnabled;
         ShowOnStartUp.IsChecked = settings.ShowSettingsOnStartup;
@@ -89,4 +89,3 @@ public partial class Settings : Window
         Hide();
     }
 }
- 

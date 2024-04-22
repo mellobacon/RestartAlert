@@ -15,8 +15,8 @@ namespace WpfApp1;
 /// </summary>
 public partial class App : Application
 {
-    private readonly string _path = "../../../appsettings.json";
-    public static AppSettings _appsettings;
+    private readonly string _path = "appsettings.json";
+    public static AppSettings AppSettingss;
 
     public struct AppSettings()
     {
@@ -47,11 +47,11 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        _ = LoadSettings();
+        LoadSettings();
 
         var settings = new Settings();
         var icon = new TaskbarIcon();
-        icon.Icon = new Icon("../../../Icons/icon.ico");
+        icon.Icon = new Icon("Icons/icon.ico");
         var menu = new ContextMenu
         {
             Placement = PlacementMode.Left
@@ -94,17 +94,17 @@ public partial class App : Application
 
     private static readonly JsonSerializerOptions _options = new() { WriteIndented = true };
 
-    private async Task LoadSettings()
+    private void LoadSettings()
     {
         try
         {
-            await using var stream = File.OpenRead(_path);
-            _appsettings = JsonSerializer.Deserialize<AppSettings>(stream);
+            using var stream = File.OpenRead(_path);
+            AppSettingss = JsonSerializer.Deserialize<AppSettings>(stream);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
-            _appsettings = new AppSettings();
+            AppSettingss = new AppSettings();
         }
     }
 
@@ -112,7 +112,7 @@ public partial class App : Application
     {
         await using var stream = File.Create(path);
         await JsonSerializer.SerializeAsync(stream, appSettings, _options);
-        _appsettings = appSettings;
+        AppSettingss = appSettings;
     }
 
     private void CheckUptime()
@@ -129,7 +129,7 @@ public partial class App : Application
     private void ShowAlert(TimeSpan time)
     {
         MessageBox.Show(
-            $"Computer hasnt been restarted in {_appsettings.MinUpTime["Value"]} {_appsettings.MinUpTime["Unit"]}" +
+            $"Computer hasnt been restarted in {AppSettingss.MinUpTime["Value"]} {AppSettingss.MinUpTime["Unit"]}" +
             "\nFix your shit." +
             $"\n\nUptime: {time}",
             "Uptime Warning",
@@ -139,22 +139,22 @@ public partial class App : Application
 
     private TimeSpan GetMinUptime()
     {
-        return _appsettings.MinUpTime["Unit"] switch
+        return AppSettingss.MinUpTime["Unit"] switch
         {
-            "Hours" => TimeSpan.FromHours(double.Parse(_appsettings.MinUpTime["Value"])),
-            "Days" => TimeSpan.FromDays(double.Parse(_appsettings.MinUpTime["Value"])),
-            "Weeks" => TimeSpan.FromDays(double.Parse(_appsettings.MinUpTime["Value"]) / 7),
+            "Hours" => TimeSpan.FromHours(double.Parse(AppSettingss.MinUpTime["Value"])),
+            "Days" => TimeSpan.FromDays(double.Parse(AppSettingss.MinUpTime["Value"])),
+            "Weeks" => TimeSpan.FromDays(double.Parse(AppSettingss.MinUpTime["Value"]) / 7),
             _ => TimeSpan.MaxValue
         };
     }
 
     private TimeSpan GetAlertFreq()
     {
-        return _appsettings.AlertFrequency["Unit"] switch
+        return AppSettingss.AlertFrequency["Unit"] switch
         {
-            "Hours" => TimeSpan.FromHours(double.Parse(_appsettings.AlertFrequency["Value"])),
-            "Days" => TimeSpan.FromDays(double.Parse(_appsettings.AlertFrequency["Value"])),
-            "Weeks" => TimeSpan.FromDays(double.Parse(_appsettings.AlertFrequency["Value"]) / 7),
+            "Hours" => TimeSpan.FromHours(double.Parse(AppSettingss.AlertFrequency["Value"])),
+            "Days" => TimeSpan.FromDays(double.Parse(AppSettingss.AlertFrequency["Value"])),
+            "Weeks" => TimeSpan.FromDays(double.Parse(AppSettingss.AlertFrequency["Value"]) / 7),
             _ => TimeSpan.Zero
         };
     }
