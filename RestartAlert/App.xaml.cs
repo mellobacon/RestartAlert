@@ -10,7 +10,7 @@ using Serilog;
 using Serilog.Core;
 using Application = System.Windows.Application;
 
-namespace WpfApp1;
+namespace RestartAlert;
 
 /// <summary>
 /// Interaction logic for App.xaml
@@ -18,7 +18,7 @@ namespace WpfApp1;
 public partial class App : Application
 {
     private readonly string _path = "appsettings.json";
-    private readonly string _logpath = "applog.txt";
+    private readonly string _logpath = "Logs/log.txt";
     private static AppSettings _appSettings;
     private static DispatcherTimer _timer = new();
     private static Logger _log = new LoggerConfiguration().CreateLogger();
@@ -75,6 +75,7 @@ public partial class App : Application
         var exit = new MenuItem() { Header = "Exit" };
         exit.Click += (sender, args) =>
         {
+            _log.Information("Exiting app...");
             Shutdown();
             Log.CloseAndFlush();
         };
@@ -129,10 +130,21 @@ public partial class App : Application
     public static async Task WriteSettings(string path, AppSettings appSettings)
     {
         _log.Information("Saving settings...");
-        await using var stream = File.Create(path);
-        await JsonSerializer.SerializeAsync(stream, appSettings, _options);
-        _appSettings = appSettings;
-        _timer.Interval = GetAlertFreq();
+        try
+        {
+            await using var stream = File.Create(path);
+            await JsonSerializer.SerializeAsync(stream, appSettings, _options);
+            _appSettings = appSettings;
+            _log.Information("Settings saved");
+            _timer.Interval = GetAlertFreq();
+        
+            var upcomingtime = (DateTime.Now + _timer.Interval).ToString("hh:mm:ss tt");
+            _log.Information($"New alert time set...Next alert in {_timer.Interval} ({upcomingtime})...");
+        }
+        catch (Exception e)
+        {
+            _log.Fatal(e, "Cannot save settings");
+        }
     }
 
     private void CheckUptime()
