@@ -8,25 +8,12 @@
     <StackPanel Margin="10">
         <StackPanel Margin="0 5">
             <Label FontWeight="Bold">Application Options</Label>
-            <CheckBox Name="ShowOnStartUp" Click="ShowOnStartUp_OnClick">Show when computer starts</CheckBox>
+            <CheckBox Name="ShowOnStartUp" Click="ShowOnStartUp_OnClick">Show when app starts</CheckBox>
         </StackPanel>
         
         <StackPanel Margin="0 5">
             <Label FontWeight="Bold">Alert Options</Label>
             <Grid Margin="0 0 0 10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="0.5*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Label>Alert when uptime is: </Label>
-                <TextBox Grid.Column="1" Margin="3 0" Name="MinUptime"></TextBox>
-                <ComboBox Grid.Column="2" Name="UptimeUnit"></ComboBox>
-            </Grid>
-            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="0.4*" />
@@ -35,7 +22,20 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Label>Alert Frequency: </Label>
+                <Label ToolTip="Minimum time from computer start">Start reminding: </Label>
+                <TextBox Grid.Column="1" Margin="3 0" Name="MinUptime"></TextBox>
+                <ComboBox Grid.Column="2" Name="UptimeUnit"></ComboBox>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="0.5*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Label>Reminder Frequency: </Label>
                 <TextBox Grid.Column="1" Margin="3 0" Name="AlertFreq"></TextBox>
                 <ComboBox Grid.Column="2" Name="AlertFreqUnit"></ComboBox>
             </Grid>
@@ -44,7 +44,7 @@
         <StackPanel Margin="0 5">
             <StackPanel>
                 <Label FontWeight="Bold">Misc (not functional yet)</Label>
-                <CheckBox Name="SpamMode" Click="SpamMode_OnClick">Spam Mode</CheckBox>
+                <CheckBox Name="SpamMode" Click="SpamMode_OnClick" IsEnabled="False">Spam Mode</CheckBox>
                 <TextBlock FontSize="10" Margin="20 0 0 0">Spams Windows everywhere as time progresses</TextBlock>
             </StackPanel>
             <Grid Margin="0 10 0 0">

@@ -25,7 +25,7 @@ public partial class App : Application
 
     public struct AppSettings()
     {
-        public bool ShowSettingsOnStartup { get; set; } = false;
+        public bool ShowSettingsOnStartup { get; set; } = true;
 
         public Dictionary<string, string> MinUpTime { get; set; } = new()
         {
@@ -66,6 +66,7 @@ public partial class App : Application
         var settings = new Settings(_appSettings);
         var icon = new TaskbarIcon();
         icon.Icon = new Icon("Icons/icon.ico");
+        icon.ToolTipText = "RestartAlert";
         var menu = new ContextMenu
         {
             Placement = PlacementMode.Left
@@ -76,8 +77,8 @@ public partial class App : Application
         exit.Click += (sender, args) =>
         {
             _log.Information("Exiting app...");
-            Shutdown();
             Log.CloseAndFlush();
+            Shutdown();
         };
 
         menu.Items.Add(settingsmenu);
@@ -165,10 +166,10 @@ public partial class App : Application
     {
         _timer.Stop();
         MessageBox.Show(
-            $"Computer hasnt been restarted in {_appSettings.MinUpTime["Value"]} {_appSettings.MinUpTime["Unit"]}" +
-            "\nFix your shit." +
-            $"\n\nUptime: {time}",
-            "Uptime Warning",
+            $"Computer hasnt been restarted in at least {_appSettings.MinUpTime["Value"]} {_appSettings.MinUpTime["Unit"]}" +
+            "\n\nRegularly performing restarts on your computer helps it run smoothly." +
+            $"\n\nTime since last restart: {time}",
+            "Restart Reminder",
             MessageBoxButton.OK,
             MessageBoxImage.Information, MessageBoxResult.None, MessageBoxOptions.DefaultDesktopOnly);
         _timer.Start();
